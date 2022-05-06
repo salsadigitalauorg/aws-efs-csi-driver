@@ -24,10 +24,11 @@ import (
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/kubernetes-sigs/aws-efs-csi-driver/pkg/cloud"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
+
+	"github.com/kubernetes-sigs/aws-efs-csi-driver/pkg/cloud"
 )
 
 const (
@@ -45,6 +46,9 @@ const (
 	GidMax              = "gidRangeEnd"
 	MountTargetIp       = "mounttargetip"
 	ProvisioningMode    = "provisioningMode"
+	PvName              = "csi.storage.k8s.io/pv/name"
+	PvcName             = "csi.storage.k8s.io/pvc/name"
+	PvcNamespace        = "csi.storage.k8s.io/pvc/namespace"
 	RoleArn             = "awsRoleArn"
 	TempMountPathPrefix = "/var/lib/csi/pv"
 	Uid                 = "uid"
@@ -113,6 +117,18 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		for k, v := range d.tags {
 			tags[k] = v
 		}
+	}
+
+	if value, ok := volumeParams[PvcName]; ok {
+		tags[PvcName] = value
+	}
+
+	if value, ok := volumeParams[PvcNamespace]; ok {
+		tags[PvcNamespace] = value
+	}
+
+	if value, ok := volumeParams[PvName]; ok {
+		tags[PvName] = value
 	}
 
 	accessPointsOptions := &cloud.AccessPointOptions{
