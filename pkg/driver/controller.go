@@ -24,10 +24,11 @@ import (
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/kubernetes-sigs/aws-efs-csi-driver/pkg/cloud"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog"
+
+	"github.com/kubernetes-sigs/aws-efs-csi-driver/pkg/cloud"
 )
 
 const (
@@ -39,6 +40,7 @@ const (
 	DefaultTagKey       = "efs.csi.aws.com/cluster"
 	DefaultTagValue     = "true"
 	DirectoryPerms      = "directoryPerms"
+	extraTags           = "extraTags"
 	FsId                = "fileSystemId"
 	Gid                 = "gid"
 	GidMin              = "gidRangeStart"
@@ -111,6 +113,14 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	// Append input tags to default tag
 	if len(d.tags) != 0 {
 		for k, v := range d.tags {
+			tags[k] = v
+		}
+	}
+
+	// Add tags specified by the StorageClass
+	if value, ok := volumeParams[extraTags]; ok {
+		newTags := parseTagsFromStr(strings.TrimSpace(value))
+		for k, v := range newTags {
 			tags[k] = v
 		}
 	}
