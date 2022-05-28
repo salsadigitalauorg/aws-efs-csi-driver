@@ -72,6 +72,10 @@ spec:
           env:
             - name: CSI_ENDPOINT
               value: unix:/csi/csi.sock
+          {{- if .Values.node.caBundle }}
+            - name: AWS_CA_BUNDLE
+              value: {{ .Values.node.caBundle.mountPath }}/{{ .Values.node.caBundle.path }}
+          {{- end }}
           volumeMounts:
             - name: kubelet-dir
               mountPath: /var/lib/kubelet
@@ -84,6 +88,10 @@ spec:
               mountPath: /var/amazon/efs
             - name: efs-utils-config-legacy
               mountPath: /etc/amazon/efs-legacy
+            {{- if .Values.node.caBundle }}
+            - name: custom-ca-bundle
+              mountPath: {{ .Values.node.caBundle.mountPath }}
+            {{- end }}
           ports:
             - name: healthz
               containerPort: {{ .Values.node.healthPort }}
@@ -161,3 +169,11 @@ spec:
           hostPath:
             path: /etc/amazon/efs
             type: DirectoryOrCreate
+        {{- if .Values.node.caBundle }}
+        - name: custom-ca-bundle
+          configMap:
+            name: {{ .Values.node.caBundle.name }}
+            items:
+              - key: {{ .Values.node.caBundle.key }}
+                path: {{ .Values.node.caBundle.path }}
+        {{- end }}

@@ -120,6 +120,12 @@ node:
     ## Enable if EKS IAM for SA is used
     #  eks.amazonaws.com/role-arn: arn:aws:iam::111122223333:role/efs-csi-role
   healthPort: 9809
+  ## Set this is using the driver in a disconnected region or partition and you have to provide a custom CA bundle.
+  #caBundle:
+  #  name: custom-bundle-configmap-name
+  #  key: custom-bundle-configmap-key
+  #  path: custom-bundle-path
+  #  mountPath: path-to-mount-bundle-in-container
 
 storageClasses: []
 # Add StorageClass resources like:
