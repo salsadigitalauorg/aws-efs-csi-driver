@@ -13,3 +13,12 @@ spec:
           "Resource": "*"
         }
       ]
+  kubeAPIServer:
+    featureGates:
+      ReadWriteOncePod: "true"
+  kubelet:
+    featureGates:
+      ReadWriteOncePod: "true"
+  kubeScheduler:
+    featureGates:
+      ReadWriteOncePod: "true"
