@@ -27,6 +27,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/kubernetes-csi/csi-test/pkg/sanity"
+
 	"github.com/kubernetes-sigs/aws-efs-csi-driver/pkg/cloud"
 )
 
@@ -67,16 +68,19 @@ func TestSanityEFSCSI(t *testing.T) {
 	nodeCaps := SetNodeCapOptInFeatures(true)
 
 	mockCtrl := gomock.NewController(t)
+	mockCloud := cloud.NewFakeCloudProvider()
+	gidAllocator := NewGidAllocator()
+
 	drv := Driver{
 		endpoint:        endpoint,
 		nodeID:          "sanity",
 		mounter:         NewFakeMounter(),
 		efsWatchdog:     &mockWatchdog{},
-		cloud:           cloud.NewFakeCloudProvider(),
+		cloud:           mockCloud,
 		nodeCaps:        nodeCaps,
 		volMetricsOptIn: true,
 		volStatter:      NewVolStatter(),
-		gidAllocator:    NewGidAllocator(),
+		provisioners:    getProvisioners(nil, mockCloud, &gidAllocator),
 	}
 	defer func() {
 		if r := recover(); r != nil {
