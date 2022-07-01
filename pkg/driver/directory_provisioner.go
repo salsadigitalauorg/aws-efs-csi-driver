@@ -23,7 +23,7 @@ type DirectoryProvisioner struct {
 	deleteProvisionedDir bool
 }
 
-func (d DirectoryProvisioner) Provision(ctx context.Context, req *csi.CreateVolumeRequest, uid, gid int64) (*csi.Volume, error) {
+func (d DirectoryProvisioner) Provision(ctx context.Context, req *csi.CreateVolumeRequest, uid, gid int) (*csi.Volume, error) {
 	var provisionedPath string
 
 	var fileSystemId string
@@ -66,7 +66,7 @@ func (d DirectoryProvisioner) Provision(ctx context.Context, req *csi.CreateVolu
 		// Grab the required permissions
 		perms := os.FileMode(0755)
 		if value, ok := volumeParams[DirectoryPerms]; ok {
-			parsedPerms, err := strconv.ParseInt(value, 8, 0)
+			parsedPerms, err := strconv.ParseUint(value, 8, 32)
 			if err == nil {
 				perms = os.FileMode(parsedPerms)
 			}

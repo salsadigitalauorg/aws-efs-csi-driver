@@ -12,7 +12,7 @@ import (
 )
 
 type Provisioner interface {
-	Provision(ctx context.Context, req *csi.CreateVolumeRequest, uid, gid int64) (*csi.Volume, error)
+	Provision(ctx context.Context, req *csi.CreateVolumeRequest, uid, gid int) (*csi.Volume, error)
 	Delete(ctx context.Context, req *csi.DeleteVolumeRequest) error
 }
 

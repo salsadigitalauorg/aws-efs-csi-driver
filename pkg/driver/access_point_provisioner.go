@@ -20,7 +20,7 @@ type AccessPointProvisioner struct {
 	mounter                  Mounter
 }
 
-func (a AccessPointProvisioner) Provision(ctx context.Context, req *csi.CreateVolumeRequest, uid, gid int64) (*csi.Volume, error) {
+func (a AccessPointProvisioner) Provision(ctx context.Context, req *csi.CreateVolumeRequest, uid, gid int) (*csi.Volume, error) {
 	volumeParams := req.GetParameters()
 	volName := req.GetName()
 	if volName == "" {
@@ -95,13 +95,13 @@ func (a AccessPointProvisioner) Provision(ctx context.Context, req *csi.CreateVo
 }
 
 func (a AccessPointProvisioner) deriveAccessPointOptions(req *csi.CreateVolumeRequest,
-	uid int64, gid int64) (*cloud.AccessPointOptions, error) {
+	uid int, gid int) (*cloud.AccessPointOptions, error) {
 
 	accessPointsOptions := &cloud.AccessPointOptions{
 		CapacityGiB: req.GetCapacityRange().GetRequiredBytes(),
 		Tags:        a.getTags(),
-		Uid:         uid,
-		Gid:         gid,
+		Uid:         int64(uid),
+		Gid:         int64(gid),
 	}
 
 	volumeParams := req.Parameters
