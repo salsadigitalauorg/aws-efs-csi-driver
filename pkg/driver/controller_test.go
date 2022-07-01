@@ -12,6 +12,7 @@ import (
 	"github.com/kubernetes-sigs/aws-efs-csi-driver/pkg/driver/mocks"
 )
 
+// TODO Check correct provisioner gets selected given the circumstances
 func TestCreateVolume(t *testing.T) {
 	var (
 		endpoint            = "endpoint"
@@ -460,6 +461,7 @@ func TestCreateVolume(t *testing.T) {
 	}
 }
 
+// TODO Check correct provisioner gets selected given the circumstances
 func TestDeleteVolume(t *testing.T) {
 	var (
 		apId     = "fsap-abcd1234xyz987"
@@ -493,7 +495,7 @@ func TestDeleteVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "Fail: DeleteVolume fails",
+			name: "Fail: DeleteVolume fails if access point cannot be deleted",
 			testFunc: func(t *testing.T) {
 				mockCtl := gomock.NewController(t)
 				mockCloud := mocks.NewMockCloud(mockCtl)
@@ -668,7 +670,7 @@ func buildDriver(endpoint string, cloud cloud.Cloud, tags string, mounter Mounte
 	driver := &Driver{
 		endpoint:          endpoint,
 		cloud:             cloud,
-		provisioners:      getProvisioners(parsedTags, cloud, deleteAccessPointRootDir, mounter),
+		provisioners:      getProvisioners(parsedTags, cloud, deleteAccessPointRootDir, mounter, &FakeOsClient{}, false),
 		tags:              parsedTags,
 		mounter:           mounter,
 		fsIdentityManager: NewFileSystemIdentityManager(),
