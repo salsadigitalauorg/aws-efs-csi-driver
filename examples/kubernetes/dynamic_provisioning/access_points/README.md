@@ -3,7 +3,7 @@ This example shows how to create a dynamically provisioned volume created throug
 
 **Note**: this example requires Kubernetes v1.17+ and driver version >= 1.2.0.
 
-### Edit [StorageClass](specstorageclass.yaml)
+### Edit [StorageClass](./specs/storageclass.yaml)
 
 ```
 kind: StorageClass

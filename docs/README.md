@@ -132,7 +132,8 @@ Before the example, you need to:
 
 #### Example links
 * [Static provisioning](../examples/kubernetes/static_provisioning/README.md)
-* [Dynamic provisioning](../examples/kubernetes/dynamic_provisioning/access_points/README.md)
+* [Dynamic provisioning with Access Points](../examples/kubernetes/dynamic_provisioning/access_points/README.md)
+* [Dynamic provisioning with Directories](../examples/kubernetes/dynamic_provisioning/directories/README.md)
 * [Encryption in transit](../examples/kubernetes/encryption_in_transit/README.md)
 * [Accessing the file system from multiple pods](../examples/kubernetes/multiple_pods/README.md)
 * [Consume EFS in StatefulSets](../examples/kubernetes/statefulset/README.md)
