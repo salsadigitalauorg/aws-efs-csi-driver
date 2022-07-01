@@ -3,7 +3,7 @@ This example shows how to create a dynamically provisioned volume created throug
 
 **Note**: this example requires Kubernetes v1.17+ and driver version >= 1.2.0.
 
-### Edit [StorageClass](./specs/storageclass.yaml)
+### Edit [StorageClass](specstorageclass.yaml)
 
 ```
 kind: StorageClass
@@ -31,8 +31,8 @@ parameters:
 ### Deploy the Example
 Create storage class, persistent volume claim (PVC) and the pod which consumes PV:
 ```sh
->> kubectl apply -f examples/kubernetes/dynamic_provisioning/specs/storageclass.yaml
->> kubectl apply -f examples/kubernetes/dynamic_provisioning/specs/pod.yaml
+>> kubectl apply -f examples/kubernetes/dynamic_provisioning/access_points/specs/storageclass.yaml
+>> kubectl apply -f examples/kubernetes/dynamic_provisioning/access_points/specs/pod.yaml
 ```
 
 ### Check EFS filesystem is used
