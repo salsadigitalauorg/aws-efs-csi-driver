@@ -401,7 +401,10 @@ var _ = ginkgo.Describe("[efs-csi] EFS CSI", func() {
 
 		ginkgo.It("should create a directory with the correct permissions when in directory provisioning mode", func() {
 			basePath := "dynamic_provisioning"
-			pvc := createProvisionedDirectory(f, basePath)
+			dynamicPvc := createProvisionedDirectory(f, basePath)
+
+			pvc, _, err := createEFSPVCPV(f.ClientSet, f.Namespace.Name, "root-dir-pvc", "/", map[string]string{})
+			framework.ExpectNoError(err, "creating root mounted pv, pvc to check")
 
 			podSpec := e2epod.MakePod(f.Namespace.Name, nil, []*v1.PersistentVolumeClaim{pvc}, false, "")
 			podSpec.Spec.RestartPolicy = v1.RestartPolicyNever
@@ -410,13 +413,12 @@ var _ = ginkgo.Describe("[efs-csi] EFS CSI", func() {
 			err = e2epod.WaitForPodRunningInNamespace(f.ClientSet, pod)
 			framework.ExpectNoError(err, "pod started running successfully")
 
-			provisionedPath := fmt.Sprintf("/mnt/volume1/%s/%s", basePath, pvc.Spec.VolumeName)
+			provisionedPath := fmt.Sprintf("/mnt/volume1/%s/%s", basePath, dynamicPvc.Spec.VolumeName)
 			uid, stderr, err := e2evolume.PodExec(f, pod, "stat -c \"%u\" "+provisionedPath)
-			framework.Logf("stdout: %s, stderr: %s", uid, stderr)
-			framework.ExpectNoError(err, "ran stat command in /mnt/volume1")
+			framework.ExpectNoError(fmt.Errorf("error from stat command '%s', %v", stderr, err), "ran stat command in /mnt/volume1")
 			framework.ExpectEqual(uid, fmt.Sprintf("%d", 1000), "Checking UID of mounted folder")
-			gid, _, err := e2evolume.PodExec(f, pod, "stat -c \"%g\" "+provisionedPath)
-			framework.ExpectNoError(err, "ran stat command in /mnt/volume1")
+			gid, stderr, err := e2evolume.PodExec(f, pod, "stat -c \"%g\" "+provisionedPath)
+			framework.ExpectNoError(fmt.Errorf("error from stat command '%s', %v", stderr, err), "ran stat command in /mnt/volume1")
 			framework.ExpectEqual(gid, fmt.Sprintf("%d", 1000), "Checking GID of mounted folder")
 		})
 
