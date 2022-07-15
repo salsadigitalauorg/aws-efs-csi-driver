@@ -99,37 +99,46 @@ func (d DirectoryProvisioner) Provision(ctx context.Context, req *csi.CreateVolu
 	}, nil
 }
 
-func (d DirectoryProvisioner) Delete(ctx context.Context, req *csi.DeleteVolumeRequest) error {
-	if d.deleteProvisionedDir {
-		fileSystemId, subpath, _, _ := parseVolumeId(req.GetVolumeId())
-
-		localCloud, roleArn, err := getCloud(d.cloud, req.GetSecrets())
-		if err != nil {
-			return err
-		}
-
-		mountOptions, err := getMountOptions(ctx, localCloud, fileSystemId, roleArn)
-		if err != nil {
-			return err
-		}
-
-		target := TempMountPathPrefix + "/" + uuid.New().String()
-		if err := d.mounter.MakeDir(target); err != nil {
-			return status.Errorf(codes.Internal, "Could not create dir %q: %v", target, err)
-		}
-		if err := d.mounter.Mount(fileSystemId, target, "efs", mountOptions); err != nil {
-			d.osClient.Remove(target)
-			return status.Errorf(codes.Internal, "Could not mount %q at %q: %v", fileSystemId, target, err)
-		}
-		if err := d.osClient.RemoveAll(target + subpath); err != nil {
-			return status.Errorf(codes.Internal, "Could not delete directory %q: %v", subpath, err)
-		}
-		if err := d.mounter.Unmount(target); err != nil {
-			return status.Errorf(codes.Internal, "Could not unmount %q: %v", target, err)
-		}
-		if err := d.osClient.RemoveAll(target); err != nil {
-			return status.Errorf(codes.Internal, "Could not delete %q: %v", target, err)
-		}
+func (d DirectoryProvisioner) Delete(ctx context.Context, req *csi.DeleteVolumeRequest) (e error) {
+	if !d.deleteProvisionedDir {
+		return nil
 	}
+	fileSystemId, subpath, _, _ := parseVolumeId(req.GetVolumeId())
+
+	localCloud, roleArn, err := getCloud(d.cloud, req.GetSecrets())
+	if err != nil {
+		return err
+	}
+
+	mountOptions, err := getMountOptions(ctx, localCloud, fileSystemId, roleArn)
+	if err != nil {
+		return err
+	}
+
+	target := TempMountPathPrefix + "/" + uuid.New().String()
+	if err := d.mounter.MakeDir(target); err != nil {
+		return status.Errorf(codes.Internal, "Could not create dir %q: %v", target, err)
+	}
+
+	defer func() {
+		if err := d.mounter.Unmount(target); err != nil {
+			e = status.Errorf(codes.Internal, "Could not unmount %q: %v", target, err)
+		}
+	}()
+
+	defer func() {
+		if err := d.osClient.RemoveAll(target); err != nil {
+			e = status.Errorf(codes.Internal, "Could not delete %q: %v", target, err)
+		}
+	}()
+
+	if err := d.mounter.Mount(fileSystemId, target, "efs", mountOptions); err != nil {
+		d.osClient.Remove(target)
+		return status.Errorf(codes.Internal, "Could not mount %q at %q: %v", fileSystemId, target, err)
+	}
+	if err := d.osClient.RemoveAll(target + subpath); err != nil {
+		return status.Errorf(codes.Internal, "Could not delete directory %q: %v", subpath, err)
+	}
+
 	return nil
 }

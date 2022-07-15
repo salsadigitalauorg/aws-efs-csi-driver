@@ -481,6 +481,7 @@ func TestDirectoryProvisioner_Delete(t *testing.T) {
 				mockMounter := mocks.NewMockMounter(mockCtl)
 				mockMounter.EXPECT().MakeDir(gomock.Any()).Return(nil)
 				mockMounter.EXPECT().Mount(fsId, gomock.Any(), "efs", gomock.Any()).Return(nil)
+				mockMounter.EXPECT().Unmount(gomock.Any()).Return(nil)
 
 				ctx := context.Background()
 

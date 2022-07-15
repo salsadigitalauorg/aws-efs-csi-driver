@@ -411,7 +411,8 @@ var _ = ginkgo.Describe("[efs-csi] EFS CSI", func() {
 			framework.ExpectNoError(err, "pod started running successfully")
 
 			provisionedPath := fmt.Sprintf("/mnt/volume1/%s/%s", basePath, pvc.Spec.VolumeName)
-			uid, _, err := e2evolume.PodExec(f, pod, "stat -c \"%u\" "+provisionedPath)
+			uid, stderr, err := e2evolume.PodExec(f, pod, "stat -c \"%u\" "+provisionedPath)
+			framework.Logf("stdout: %s, stderr: %s", uid, stderr)
 			framework.ExpectNoError(err, "ran stat command in /mnt/volume1")
 			framework.ExpectEqual(uid, fmt.Sprintf("%d", 1000), "Checking UID of mounted folder")
 			gid, _, err := e2evolume.PodExec(f, pod, "stat -c \"%g\" "+provisionedPath)
