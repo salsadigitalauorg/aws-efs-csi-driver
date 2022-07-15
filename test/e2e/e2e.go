@@ -403,7 +403,11 @@ var _ = ginkgo.Describe("[efs-csi] EFS CSI", func() {
 			basePath := "dynamic_provisioning"
 			dynamicPvc := createProvisionedDirectory(f, basePath)
 
-			pvc, _, err := createEFSPVCPV(f.ClientSet, f.Namespace.Name, "root-dir-pvc", "/", map[string]string{})
+			pvc, pv, err := createEFSPVCPV(f.ClientSet, f.Namespace.Name, "root-dir-pvc", "/", map[string]string{})
+			defer func() {
+				_ = f.ClientSet.CoreV1().PersistentVolumeClaims(f.Namespace.Name).Delete(context.TODO(), pvc.Name, metav1.DeleteOptions{})
+				_ = f.ClientSet.CoreV1().PersistentVolumes().Delete(context.TODO(), pv.Name, metav1.DeleteOptions{})
+			}()
 			framework.ExpectNoError(err, "creating root mounted pv, pvc to check")
 
 			podSpec := e2epod.MakePod(f.Namespace.Name, nil, []*v1.PersistentVolumeClaim{pvc}, false, "")
@@ -431,7 +435,11 @@ var _ = ginkgo.Describe("[efs-csi] EFS CSI", func() {
 				metav1.DeleteOptions{})
 			framework.ExpectNoError(err, "deleting pvc")
 
-			pvc, _, err = createEFSPVCPV(f.ClientSet, f.Namespace.Name, "root-dir-pvc", "/", map[string]string{})
+			pvc, pv, err := createEFSPVCPV(f.ClientSet, f.Namespace.Name, "root-dir-pvc", "/", map[string]string{})
+			defer func() {
+				_ = f.ClientSet.CoreV1().PersistentVolumeClaims(f.Namespace.Name).Delete(context.TODO(), pvc.Name, metav1.DeleteOptions{})
+				_ = f.ClientSet.CoreV1().PersistentVolumes().Delete(context.TODO(), pv.Name, metav1.DeleteOptions{})
+			}()
 			framework.ExpectNoError(err, "creating root mounted pv, pvc to check")
 
 			podSpec := e2epod.MakePod(f.Namespace.Name, nil, []*v1.PersistentVolumeClaim{pvc}, false, "")
