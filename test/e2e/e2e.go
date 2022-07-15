@@ -416,13 +416,16 @@ var _ = ginkgo.Describe("[efs-csi] EFS CSI", func() {
 			framework.ExpectNoError(err, "creating pod")
 			err = e2epod.WaitForPodRunningInNamespace(f.ClientSet, pod)
 			framework.ExpectNoError(err, "pod started running successfully")
+			defer func() {
+				_ = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
+			}()
 
 			provisionedPath := fmt.Sprintf("/mnt/volume1/%s/%s", basePath, dynamicPvc.Spec.VolumeName)
-			uid, stderr, err := e2evolume.PodExec(f, pod, "stat -c \"%u\" "+provisionedPath)
-			framework.ExpectNoError(fmt.Errorf("error from stat command '%s', %v", stderr, err), "ran stat command in /mnt/volume1")
+			uid, _, err := e2evolume.PodExec(f, pod, "stat -c \"%u\" "+provisionedPath)
+			framework.ExpectNoError(err, "ran stat command in /mnt/volume1")
 			framework.ExpectEqual(uid, fmt.Sprintf("%d", 1000), "Checking UID of mounted folder")
-			gid, stderr, err := e2evolume.PodExec(f, pod, "stat -c \"%g\" "+provisionedPath)
-			framework.ExpectNoError(fmt.Errorf("error from stat command '%s', %v", stderr, err), "ran stat command in /mnt/volume1")
+			gid, _, err := e2evolume.PodExec(f, pod, "stat -c \"%g\" "+provisionedPath)
+			framework.ExpectNoError(err, "ran stat command in /mnt/volume1")
 			framework.ExpectEqual(gid, fmt.Sprintf("%d", 1000), "Checking GID of mounted folder")
 		})
 
@@ -448,6 +451,10 @@ var _ = ginkgo.Describe("[efs-csi] EFS CSI", func() {
 			framework.ExpectNoError(err, "creating pod")
 			err = e2epod.WaitForPodRunningInNamespace(f.ClientSet, pod)
 			framework.ExpectNoError(err, "pod started running successfully")
+			defer func() {
+				_ = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
+			}()
+
 			e2evolume.VerifyExecInPodFail(f, pod, "test -f "+"/mnt/volume1/"+basePath+"/"+volumeName, 1)
 
 		})
