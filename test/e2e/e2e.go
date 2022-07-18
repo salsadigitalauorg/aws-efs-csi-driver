@@ -416,9 +416,6 @@ var _ = ginkgo.Describe("[efs-csi] EFS CSI", func() {
 			framework.ExpectNoError(err, "creating pod")
 			err = e2epod.WaitForPodRunningInNamespace(f.ClientSet, pod)
 			framework.ExpectNoError(err, "pod started running successfully")
-			defer func() {
-				_ = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
-			}()
 
 			provisionedPath := fmt.Sprintf("/mnt/volume1/%s/%s", basePath, dynamicPvc.Spec.VolumeName)
 			uid, _, err := e2evolume.PodExec(f, pod, "stat -c \"%u\" "+provisionedPath)
@@ -427,6 +424,9 @@ var _ = ginkgo.Describe("[efs-csi] EFS CSI", func() {
 			gid, _, err := e2evolume.PodExec(f, pod, "stat -c \"%g\" "+provisionedPath)
 			framework.ExpectNoError(err, "ran stat command in /mnt/volume1")
 			framework.ExpectEqual(gid, fmt.Sprintf("%d", 1000), "Checking GID of mounted folder")
+			_ = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
+			err = e2epod.WaitForPodToDisappear(f.ClientSet, f.Namespace.Name, pod.Name, labels.Everything(), time.Second*5, time.Second*60)
+			framework.ExpectNoError(err, "Cleaning up no longer required pod")
 		})
 
 		ginkgo.It("should delete a directory provisioned in directory provisioning mode", func() {
@@ -451,11 +451,12 @@ var _ = ginkgo.Describe("[efs-csi] EFS CSI", func() {
 			framework.ExpectNoError(err, "creating pod")
 			err = e2epod.WaitForPodRunningInNamespace(f.ClientSet, pod)
 			framework.ExpectNoError(err, "pod started running successfully")
-			defer func() {
-				_ = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
-			}()
 
 			e2evolume.VerifyExecInPodFail(f, pod, "test -f "+"/mnt/volume1/"+basePath+"/"+volumeName, 1)
+
+			_ = f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
+			err = e2epod.WaitForPodToDisappear(f.ClientSet, f.Namespace.Name, pod.Name, labels.Everything(), time.Second*5, time.Second*60)
+			framework.ExpectNoError(err, "Cleaning up no longer required pod")
 
 		})
 	})
