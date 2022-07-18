@@ -374,7 +374,7 @@ var _ = ginkgo.Describe("[efs-csi] EFS CSI", func() {
 			testEncryptInTransit(f, &encryptInTransit)
 		})
 
-		createProvisionedDirectory := func(f *framework.Framework, basePath string) *v1.PersistentVolumeClaim {
+		createProvisionedDirectory := func(f *framework.Framework, basePath string, pvcName string) *v1.PersistentVolumeClaim {
 			immediateBinding := storagev1.VolumeBindingImmediate
 			sc := storageframework.GetStorageClass("efs.csi.aws.com", map[string]string{
 				"provisioningMode": "efs-dir",
@@ -389,19 +389,19 @@ var _ = ginkgo.Describe("[efs-csi] EFS CSI", func() {
 			}()
 			_, err := f.ClientSet.StorageV1().StorageClasses().Create(context.TODO(), sc, metav1.CreateOptions{})
 			framework.ExpectNoError(err, "creating dynamic provisioning storage class")
-			pvcName := "directory-pvc"
 			pvc := makeEFSPVC(f.Namespace.Name, pvcName, sc.Name)
 			pvc, err = f.ClientSet.CoreV1().PersistentVolumeClaims(f.Namespace.Name).Create(context.TODO(), pvc, metav1.CreateOptions{})
 			err = e2epv.WaitForPersistentVolumeClaimPhase(v1.ClaimBound, f.ClientSet, f.Namespace.Name, pvc.Name,
 				time.Second*5, time.Minute)
 			framework.ExpectNoError(err, "waiting for pv to be provisioned and bound")
+			pvc, err = f.ClientSet.CoreV1().PersistentVolumeClaims(f.Namespace.Name).Get(context.TODO(), pvc.Name, metav1.GetOptions{})
 
 			return pvc
 		}
 
 		ginkgo.It("should create a directory with the correct permissions when in directory provisioning mode", func() {
 			basePath := "dynamic_provisioning"
-			dynamicPvc := createProvisionedDirectory(f, basePath)
+			dynamicPvc := createProvisionedDirectory(f, basePath, "directory-pvc-1")
 
 			pvc, pv, err := createEFSPVCPV(f.ClientSet, f.Namespace.Name, "root-dir-pvc", "/", map[string]string{})
 			defer func() {
@@ -431,7 +431,7 @@ var _ = ginkgo.Describe("[efs-csi] EFS CSI", func() {
 
 		ginkgo.It("should delete a directory provisioned in directory provisioning mode", func() {
 			basePath := "dynamic_provisioning"
-			pvc := createProvisionedDirectory(f, basePath)
+			pvc := createProvisionedDirectory(f, basePath, "directory-pvc-2")
 			volumeName := pvc.Spec.VolumeName
 
 			err := f.ClientSet.CoreV1().PersistentVolumeClaims(f.Namespace.Name).Delete(context.TODO(), pvc.Name,
