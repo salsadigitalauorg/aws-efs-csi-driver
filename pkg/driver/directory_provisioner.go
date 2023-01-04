@@ -64,7 +64,7 @@ func (d DirectoryProvisioner) Provision(ctx context.Context, req *csi.CreateVolu
 		klog.V(5).Infof("Provisioning directory at path %s", provisionedPath)
 
 		// Grab the required permissions
-		perms := os.FileMode(0755)
+		perms := os.FileMode(0777)
 		if value, ok := volumeParams[DirectoryPerms]; ok {
 			parsedPerms, err := strconv.ParseUint(value, 8, 32)
 			if err == nil {
@@ -75,7 +75,7 @@ func (d DirectoryProvisioner) Provision(ctx context.Context, req *csi.CreateVolu
 		klog.V(5).Infof("Provisioning directory with permissions %s", perms)
 
 		provisionedDirectory := path.Join(target, provisionedPath)
-		err := d.osClient.MkDirAllWithPerms(provisionedDirectory, perms, uid, gid)
+		err := d.osClient.MkDirAllWithPermsNoOwnership(provisionedDirectory, perms)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not provision directory: %v", err)
 		}
@@ -121,14 +121,16 @@ func (d DirectoryProvisioner) Delete(ctx context.Context, req *csi.DeleteVolumeR
 	}
 
 	defer func() {
-		if err := d.mounter.Unmount(target); err != nil {
+		// Try and unmount the directory
+		unmountErr := d.mounter.Unmount(target)
+		// If that fails then track the error but don't do anything else
+		if unmountErr != nil {
 			e = status.Errorf(codes.Internal, "Could not unmount %q: %v", target, err)
-		}
-	}()
-
-	defer func() {
-		if err := d.osClient.RemoveAll(target); err != nil {
-			e = status.Errorf(codes.Internal, "Could not delete %q: %v", target, err)
+		} else {
+			// If it is nil then it's safe to try and delete the directory as it should now be empty
+			if err := d.osClient.RemoveAll(target); err != nil {
+				e = status.Errorf(codes.Internal, "Could not delete %q: %v", target, err)
+			}
 		}
 	}()
 

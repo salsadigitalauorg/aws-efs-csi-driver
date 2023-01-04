@@ -42,6 +42,10 @@ The following CSI interfaces are implemented:
 * Custom Posix group Id range for Access Point root directory must include both `gidRangeStart` and `gidRangeEnd` parameters. These parameters are optional only if both are omitted. If you specify one, the other becomes mandatory.
 * When using a custom Posix group ID range, there is a possibility for the driver to run out of available POSIX group Ids. We suggest ensuring custom group ID range is large enough or create a new storage class with a new file system to provision additional volumes. 
 * `az` under storage class parameter is not be confused with efs-utils mount option `az`. The `az` mount option is used for cross-az mount or efs one zone file system mount within the same aws account as the cluster.
+* Using dynamic provisioning, [user identity enforcement]((https://docs.aws.amazon.com/efs/latest/ug/efs-access-points.html#enforce-identity-access-points)) is always applied.
+ * When user enforcement is enabled, Amazon EFS replaces the NFS client's user and group IDs with the identity configured on the access point for all file system operations.
+ * The uid/gid configured on the access point is either the uid/gid specified in the storage class, a value in the gidRangeStart-gidRangeEnd (used as both uid/gid) specified in the storage class, or is a value selected by the driver is no uid/gid or gidRange is specified.
+ * We suggest using [static provisioning](https://github.com/kubernetes-sigs/aws-efs-csi-driver/blob/master/examples/kubernetes/static_provisioning/README.md) if you do not wish to use user identity enforcement.
 
 ### Encryption In Transit
 One of the advantages of using EFS is that it provides [encryption in transit](https://aws.amazon.com/blogs/aws/new-encryption-of-data-in-transit-for-amazon-efs/) support using TLS. Using encryption in transit, data will be encrypted during its transition over the network to the EFS service. This provides an extra layer of defence-in-depth for applications that requires strict security compliance.
@@ -54,39 +58,48 @@ Encryption in transit is enabled by default in the master branch version of the 
 The following sections are Kubernetes specific. If you are a Kubernetes user, use this for driver features, installation steps and examples.
 
 ### Kubernetes Version Compability Matrix
-| AWS EFS CSI Driver \ Kubernetes Version| maturity | v1.11 | v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17+ |
-|----------------------------------------|----------|-------|-------|-------|-------|-------|-------|-------|
-| master branch                          | GA       | no    | no    | no    | no    | no    | no    | yes   |
-| v1.3.x                                 | GA       | no    | no    | no    | no    | no    | no    | yes   |
-| v1.2.x                                 | GA       | no    | no    | no    | no    | no    | no    | yes   |
-| v1.1.x                                 | GA       | no    | no    | no    | yes   | yes   | yes   | yes   |
-| v1.0.x                                 | GA       | no    | no    | no    | yes   | yes   | yes   | yes   |
-| v0.3.0                                 | beta     | no    | no    | no    | yes   | yes   | yes   | yes   |
-| v0.2.0                                 | beta     | no    | no    | no    | yes   | yes   | yes   | yes   |
-| v0.1.0                                 | alpha    | yes   | yes   | yes   | no    | no    | no    | no    |
+| AWS EFS CSI Driver \ Kubernetes Version | maturity | v1.11 | v1.12 | v1.13 | v1.14 | v1.15 | v1.16 | v1.17+ |
+|-----------------------------------------|----------|-------|-------|-------|-------|-------|-------|-------|
+| master branch                           | GA       | no    | no    | no    | no    | no    | no    | yes   |
+| v1.4.x                                  | GA       | no    | no    | no    | no    | no    | no    | yes   |
+| v1.3.x                                  | GA       | no    | no    | no    | no    | no    | no    | yes   |
+| v1.2.x                                  | GA       | no    | no    | no    | no    | no    | no    | yes   |
+| v1.1.x                                  | GA       | no    | no    | no    | yes   | yes   | yes   | yes   |
+| v1.0.x                                  | GA       | no    | no    | no    | yes   | yes   | yes   | yes   |
+| v0.3.0                                  | beta     | no    | no    | no    | yes   | yes   | yes   | yes   |
+| v0.2.0                                  | beta     | no    | no    | no    | yes   | yes   | yes   | yes   |
+| v0.1.0                                  | alpha    | yes   | yes   | yes   | no    | no    | no    | no    |
 
 ### Container Images
-|EFS CSI Driver Version     | Image                               |
-|---------------------------|-------------------------------------|
-|master branch              |amazon/aws-efs-csi-driver:master     |
-|v1.4.0                     |amazon/aws-efs-csi-driver:v1.4.0     |
-|v1.3.8                     |amazon/aws-efs-csi-driver:v1.3.8     |
-|v1.3.7                     |amazon/aws-efs-csi-driver:v1.3.7     |
-|v1.3.6                     |amazon/aws-efs-csi-driver:v1.3.6     |
-|v1.3.5                     |amazon/aws-efs-csi-driver:v1.3.5     |
-|v1.3.4                     |amazon/aws-efs-csi-driver:v1.3.4     |
-|v1.3.3                     |amazon/aws-efs-csi-driver:v1.3.3     |
-|v1.3.2                     |amazon/aws-efs-csi-driver:v1.3.2     |
-|v1.3.1                     |amazon/aws-efs-csi-driver:v1.3.1     |
-|v1.3.0                     |amazon/aws-efs-csi-driver:v1.3.0     |
-|v1.2.1                     |amazon/aws-efs-csi-driver:v1.2.1     |
-|v1.2.0                     |amazon/aws-efs-csi-driver:v1.2.0     |
-|v1.1.1                     |amazon/aws-efs-csi-driver:v1.1.1     |
-|v1.1.0                     |amazon/aws-efs-csi-driver:v1.1.0     |
-|v1.0.0                     |amazon/aws-efs-csi-driver:v1.0.0     |
-|v0.3.0                     |amazon/aws-efs-csi-driver:v0.3.0     |
-|v0.2.0                     |amazon/aws-efs-csi-driver:v0.2.0     |
-|v0.1.0                     |amazon/aws-efs-csi-driver:v0.1.0     |
+| EFS CSI Driver Version | Image                            |
+|------------------------|----------------------------------|
+| master branch          | amazon/aws-efs-csi-driver:master |
+| v1.4.8                 | amazon/aws-efs-csi-driver:v1.4.8 |
+| v1.4.7                 | amazon/aws-efs-csi-driver:v1.4.7 |
+| v1.4.6                 | amazon/aws-efs-csi-driver:v1.4.6 |
+| v1.4.5                 | amazon/aws-efs-csi-driver:v1.4.5 |
+| v1.4.4                 | amazon/aws-efs-csi-driver:v1.4.4 |
+| v1.4.3                 | amazon/aws-efs-csi-driver:v1.4.3 |
+| v1.4.2                 | amazon/aws-efs-csi-driver:v1.4.2 |
+| v1.4.1                 | amazon/aws-efs-csi-driver:v1.4.1 |
+| v1.4.0                 | amazon/aws-efs-csi-driver:v1.4.0 |
+| v1.3.8                 | amazon/aws-efs-csi-driver:v1.3.8 |
+| v1.3.7                 | amazon/aws-efs-csi-driver:v1.3.7 |
+| v1.3.6                 | amazon/aws-efs-csi-driver:v1.3.6 |
+| v1.3.5                 | amazon/aws-efs-csi-driver:v1.3.5 |
+| v1.3.4                 | amazon/aws-efs-csi-driver:v1.3.4 |
+| v1.3.3                 | amazon/aws-efs-csi-driver:v1.3.3 |
+| v1.3.2                 | amazon/aws-efs-csi-driver:v1.3.2 |
+| v1.3.1                 | amazon/aws-efs-csi-driver:v1.3.1 |
+| v1.3.0                 | amazon/aws-efs-csi-driver:v1.3.0 |
+| v1.2.1                 | amazon/aws-efs-csi-driver:v1.2.1 |
+| v1.2.0                 | amazon/aws-efs-csi-driver:v1.2.0 |
+| v1.1.1                 | amazon/aws-efs-csi-driver:v1.1.1 |
+| v1.1.0                 | amazon/aws-efs-csi-driver:v1.1.0 |
+| v1.0.0                 | amazon/aws-efs-csi-driver:v1.0.0 |
+| v0.3.0                 | amazon/aws-efs-csi-driver:v0.3.0 |
+| v0.2.0                 | amazon/aws-efs-csi-driver:v0.2.0 |
+| v0.1.0                 | amazon/aws-efs-csi-driver:v0.1.0 |
 
 ### Features
 * Static provisioning - EFS file system needs to be created manually first, then it could be mounted inside container as a persistent volume (PV) using the driver.
@@ -102,14 +115,14 @@ The following sections are Kubernetes specific. If you are a Kubernetes user, us
 ### Installation
 #### Set up driver permission:
 The driver requires IAM permission to talk to Amazon EFS to manage the volume on user's behalf. There are several methods to grant driver IAM permission:
-* Using IAM Role for Service Account (Recommended if you're using EKS): create an [IAM Role for service accounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) with the [required permissions](./iam-policy-example.json). Uncomment annotations and put the IAM role ARN in [service-account manifest](../deploy/kubernetes/base/serviceaccount-csi-controller.yaml)
+* Using IAM Role for Service Account (Recommended if you're using EKS): create an [IAM Role for service accounts](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html) with the [required permissions](./iam-policy-example.json). Uncomment annotations and put the IAM role ARN in [service-account manifest](../deploy/kubernetes/base/controller-serviceaccount.yaml)
 * Using IAM [instance profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2_instance-profiles.html) - grant all the worker nodes with [required permissions](./iam-policy-example.json) by attaching policy to the instance profile of the worker.
 
 #### Deploy the driver:
 
 If you want to deploy the stable driver:
 ```sh
-kubectl apply -k "github.com/kubernetes-sigs/aws-efs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.3"
+kubectl apply -k "github.com/kubernetes-sigs/aws-efs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.4"
 ```
 
 If you want to deploy the development driver:
@@ -122,6 +135,29 @@ Alternatively, you could also install the driver using helm:
 helm repo add aws-efs-csi-driver https://kubernetes-sigs.github.io/aws-efs-csi-driver/
 helm repo update
 helm upgrade --install aws-efs-csi-driver --namespace kube-system aws-efs-csi-driver/aws-efs-csi-driver
+```
+
+To force the efs-csi-driver to use FIPS, you can add an argument to the helm upgrade command:
+```
+helm upgrade --install aws-efs-csi-driver --namespace kube-system aws-efs-csi-driver/aws-efs-csi-driver --set useFips=true
+```
+### Upgrading the EFS CSI Driver
+
+#### Upgrade to the latest version:
+If you want to update to latest released version:
+```sh
+kubectl apply -k "github.com/kubernetes-sigs/aws-efs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.4"
+```
+
+#### Upgrade to a specific version:
+If you want to update to a specific version, first customize the driver yaml file locally:
+```sh
+kubectl kustomize "github.com/kubernetes-sigs/aws-efs-csi-driver/deploy/kubernetes/overlays/stable/?ref=release-1.4" > driver.yaml
+```
+
+Then, update all lines referencing `image: amazon/aws-efs-csi-driver` to the desired version (e.g., to `image: amazon/aws-efs-csi-driver:v1.4.8`) in the yaml file, and deploy driver yaml again:
+```sh
+kubectl apply -f driver.yaml
 ```
 
 ### Examples
